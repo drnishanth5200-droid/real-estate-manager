@@ -1,0 +1,245 @@
+File Path,Code
+src/App.js,"import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import Register from './components/Auth/Register';
+import Login from './components/Auth/Login';
+import AddProperty from './components/Properties/AddProperty';
+import PropertyList from './components/Properties/PropertyList';
+
+function App() {
+  return (
+    <Router>
+      <nav style={{ display: 'flex', gap: 20, padding: 10 }}>
+        <Link to=""/"">Properties</Link>
+        <Link to=""/register"">Register</Link>
+        <Link to=""/login"">Login</Link>
+        <Link to=""/add-property"">Add Property</Link>
+      </nav>
+      <Routes>
+        <Route path=""/"" element={<PropertyList />} />
+        <Route path=""/register"" element={<Register />} />
+        <Route path=""/login"" element={<Login />} />
+        <Route path=""/add-property"" element={<AddProperty />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;"
+src/index.js,"import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+"
+src/components/Auth/Register.js,"import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+export default function Register() {
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const navigate = useNavigate();
+
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:5000/api/users/register', form);
+      alert('Registration successful! Please login.');
+      navigate('/login');
+    } catch (err) {
+      alert('Error: ' + (err.response?.data?.error || 'Registration failed'));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>Register</h2>
+      <input name=""name"" onChange={handleChange} placeholder=""Name"" required />
+      <input type=""email"" name=""email"" onChange={handleChange} placeholder=""Email"" required />
+      <input type=""password"" name=""password"" onChange={handleChange} placeholder=""Password"" required />
+      <button type=""submit"">Register</button>
+    </form>
+  );
+}
+"
+src/components/Auth/Login.js,"import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+export default function Login() {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const navigate = useNavigate();
+
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      const res = await axios.post('http://localhost:5000/api/users/login', form);
+      localStorage.setItem('token', res.data.token);
+      alert('Login successful!');
+      navigate('/add-property');
+    } catch (err) {
+      alert('Login failed: ' + (err.response?.data?.error || 'Invalid credentials'));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>Login</h2>
+      <input type=""email"" name=""email"" onChange={handleChange} placeholder=""Email"" required />
+      <input type=""password"" name=""password"" onChange={handleChange} placeholder=""Password"" required />
+      <button type=""submit"">Login</button>
+    </form>
+  );
+}
+"
+src/components/Properties/AddProperty.js,"import React, { useState } from 'react';
+import axios from 'axios';
+
+export default function AddProperty() {
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    price: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    contactNumber: '',
+    specialFeatures: '',
+    type: 'sale',
+    images: []
+  });
+
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleImageChange = e => {
+    const files = Array.from(e.target.files);
+    Promise.all(
+      files.map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
+      })
+    ).then(images => setForm(prev => ({ ...prev, images })));
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    const payload = { ...form, specialFeatures: form.specialFeatures.split(',').map(s => s.trim()) };
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/properties', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Property listed successfully');
+      setForm({
+        title: '',
+        description: '',
+        price: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        contactNumber: '',
+        specialFeatures: '',
+        type: 'sale',
+        images: []
+      });
+    } catch (err) {
+      alert('Error listing property: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>Add Property</h2>
+      <input name=""title"" value={form.title} onChange={handleChange} placeholder=""Title"" required />
+      <textarea name=""description"" value={form.description} onChange={handleChange} placeholder=""Description"" required />
+      <input name=""price"" type=""number"" value={form.price} onChange={handleChange} placeholder=""Price"" required />
+      <input name=""address"" value={form.address} onChange={handleChange} placeholder=""Address"" required />
+      <input name=""city"" value={form.city} onChange={handleChange} placeholder=""City"" required />
+      <input name=""state"" value={form.state} onChange={handleChange} placeholder=""State"" required />
+      <input name=""pincode"" value={form.pincode} onChange={handleChange} placeholder=""Pincode"" required />
+      <input name=""contactNumber"" value={form.contactNumber} onChange={handleChange} placeholder=""Contact Number"" required />
+      <select name=""type"" value={form.type} onChange={handleChange}>
+        <option value=""sale"">Sale</option>
+        <option value=""rent"">Rent</option>
+        <option value=""lease"">Lease</option>
+      </select>
+      <input name=""specialFeatures"" value={form.specialFeatures} onChange={handleChange} placeholder=""Special Features (comma separated)"" />
+      <input type=""file"" multiple accept=""image/*"" onChange={handleImageChange} />
+      <button type=""submit"">List Property</button>
+    </form>
+  );
+}
+"
+src/components/Properties/PropertyList.js,"import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+export default function PropertyList() {
+  const [properties, setProperties] = useState([]);
+  const [filters, setFilters] = useState({ type: '', city: '', priceMin: '', priceMax: '' });
+
+  const fetchProperties = async () => {
+    const query = new URLSearchParams();
+    Object.entries(filters).forEach(([key, val]) => val && query.append(key, val));
+    const res = await axios.get(`http://localhost:5000/api/properties?${query.toString()}`);
+    setProperties(res.data);
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const handleSearch = e => {
+    e.preventDefault();
+    fetchProperties();
+  };
+
+  const handleChange = e => setFilters({ ...filters, [e.target.name]: e.target.value });
+
+  return (
+    <div>
+      <form onSubmit={handleSearch}>
+        <select name=""type"" value={filters.type} onChange={handleChange}>
+          <option value="""">Any</option>
+          <option value=""sale"">Sale</option>
+          <option value=""rent"">Rent</option>
+          <option value=""lease"">Lease</option>
+        </select>
+        <input name=""city"" placeholder=""City"" value={filters.city} onChange={handleChange} />
+        <input name=""priceMin"" type=""number"" placeholder=""Min Price"" value={filters.priceMin} onChange={handleChange} />
+        <input name=""priceMax"" type=""number"" placeholder=""Max Price"" value={filters.priceMax} onChange={handleChange} />
+        <button type=""submit"">Search</button>
+      </form>
+      <div>
+        {properties.map(p => (
+          <div key={p._id} style={{ border: '1px solid #ccc', margin: 10, padding: 10 }}>
+            <h3>{p.title} - ₹{p.price}</h3>
+            <p>{p.address}, {p.city}, {p.state} - {p.pincode}</p>
+            <p>Contact: {p.contactNumber}</p>
+            <p>Type: {p.type}</p>
+            <p>Features: {p.specialFeatures.join(', ')}</p>
+            <div style={{ display: 'flex' }}>
+              {p.images.map((img, i) => (
+                <img key={i} src={img} alt=""property"" style={{ width: 120, marginRight: 10 }} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+"
